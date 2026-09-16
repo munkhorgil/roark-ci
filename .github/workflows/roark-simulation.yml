@@ -1,0 +1,55 @@
+name: Roark simulation gate
+
+# Merging to main calls the agent with simulated customers and fails the build if a
+# check falls short. `workflow_dispatch` is here so the same gate can be fired by hand
+# from the Actions tab without pushing a commit.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      plan-id:
+        description: 'Run plan to gate on. Defaults to the ROARK_PLAN_ID repo variable.'
+        required: false
+        type: string
+      min-pass-rate:
+        description: 'Hold every check to at least this much (0-100) for this run only. Tightens, never loosens.'
+        required: false
+        type: string
+
+# A newer push is already testing the same branch, so let it win. The action cancels
+# the Roark run too, rather than leaving abandoned simulations placing billable calls.
+concurrency:
+  group: roark-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  simulate:
+    runs-on: ubuntu-latest
+    # Last line of defence if the step itself wedges. The action has its own
+    # `timeout-minutes` for the run it is waiting on.
+    timeout-minutes: 45
+    steps:
+      # Pinned to `main` because the action has no release yet. Switch this to
+      # `@v1` once v1.0.0 is published: `@v1` is the moving major tag customers pin.
+      - name: Gate on a Roark simulation
+        id: gate
+        uses: roarkhq/simulation-action@main
+        with:
+          api-token: ${{ secrets.ROARK_API_KEY }}
+          plan-id: ${{ inputs.plan-id || vars.ROARK_PLAN_ID }}
+          min-pass-rate: ${{ inputs.min-pass-rate }}
+          timeout-minutes: 30
+
+      # Everything the action reports, in one place, whichever way the gate went.
+      - name: Show what the gate reported
+        if: always()
+        run: |
+          {
+            echo "verdict:       ${{ steps.gate.outputs.verdict }}"
+            echo "score:         ${{ steps.gate.outputs.score }}"
+            echo "checks passed: ${{ steps.gate.outputs.checks-passed }} of ${{ steps.gate.outputs.checks-total }}"
+            echo "run:           ${{ steps.gate.outputs.run-url }}"
+            echo "plan:          ${{ steps.gate.outputs.plan-id }}"
+            echo "skip reason:   ${{ steps.gate.outputs.skip-reason }}"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
