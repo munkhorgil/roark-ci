@@ -30,11 +30,13 @@ jobs:
     # `timeout-minutes` for the run it is waiting on.
     timeout-minutes: 45
     steps:
-      # Pinned to `main` because the action has no release yet. Switch this to
-      # `@v1` once v1.0.0 is published: `@v1` is the moving major tag customers pin.
+      # TEMPORARY: pinned to the branch of roarkhq/simulation-action#10, which fixes
+      # the CLI install (`npm i -g` dies with EACCES on a stock runner). Move to
+      # `@main` once that PR merges, and to `@v1` once v1.0.0 is published: `@v1` is
+      # the moving major tag customers are meant to pin.
       - name: Gate on a Roark simulation
         id: gate
-        uses: roarkhq/simulation-action@main
+        uses: roarkhq/simulation-action@orgil/cli-install-without-sudo
         with:
           api-token: ${{ secrets.ROARK_API_KEY }}
           plan-id: ${{ inputs.plan-id || vars.ROARK_PLAN_ID }}
