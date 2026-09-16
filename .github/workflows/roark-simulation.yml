@@ -36,7 +36,7 @@ jobs:
       # the moving major tag customers are meant to pin.
       - name: Gate on a Roark simulation
         id: gate
-        uses: roarkhq/simulation-action@orgil/cli-install-without-sudo
+        uses: roarkhq/simulation-action@orgil/main
         with:
           api-token: ${{ secrets.ROARK_API_KEY }}
           plan-id: ${{ inputs.plan-id || vars.ROARK_PLAN_ID }}
